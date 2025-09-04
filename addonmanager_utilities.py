@@ -203,16 +203,16 @@ def restart_freecad():
 def get_zip_url(repo):
     """Returns the location of a zip file from a repo, if available"""
 
-    parsed_url = urlparse(repo.url)
-    if parsed_url.netloc == "github.com":
+    repo_host = get_repo_host(repo)
+
+    if repo_host in ["github.com", "codeberg.org", "gitea"]:
         return f"{repo.url}/archive/{repo.branch}.zip"
-    if parsed_url.netloc in ["gitlab.com", "framagit.org", "salsa.debian.org"]:
+    if repo_host in ["gitlab.com", "framagit.org", "salsa.debian.org", "gitlab"]:
         return f"{repo.url}/-/archive/{repo.branch}/{repo.name}-{repo.branch}.zip"
-    if parsed_url.netloc in ["codeberg.org"]:
-        return f"{repo.url}/archive/{repo.branch}.zip"
+
     fci.Console.PrintLog(
         "Debug: addonmanager_utilities.get_zip_url: Unknown git host fetching zip URL:"
-        + parsed_url.netloc
+        + repo.url
         + "\n"
     )
     return f"{repo.url}/-/archive/{repo.branch}/{repo.name}-{repo.branch}.zip"
@@ -262,7 +262,6 @@ def construct_git_url(repo, filename):
 
 def get_readme_url(repo):
     """Returns the location of a readme file"""
-
     return construct_git_url(repo, "README.md")
 
 
