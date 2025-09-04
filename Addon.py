@@ -172,8 +172,10 @@ class Addon:
         url: str = "",
         status: Status = Status.UNKNOWN,
         branch: str = "",
+        git_service: str = ""
     ):
         self.name = name.strip()
+        self.url = url.strip()
         self.display_name = self.name
         self.relative_cache_path = ""
         self.branch = branch.strip()
@@ -184,14 +186,6 @@ class Addon:
         self.remote_last_updated: Optional[datetime.datetime] = None
         self.stats = AddonStats()
         self.score = 0
-
-        #Check for optional git service identifier for self-hosted instances
-        try:
-            url, git_service = url.rsplit("|", 1)
-        except ValueError:
-            git_service = ""
-        
-        self.url = url.strip()
         self.git_service = git_service.strip()
 
         # In cases where there are multiple versions/branches/installations available for an addon,

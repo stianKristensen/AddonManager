@@ -93,24 +93,30 @@ class CreateAddonListWorker(QtCore.QThread):
             return
 
     def _get_custom_addons(self):
-
-        # querying custom addons first
         addon_list = fci.Preferences().get("CustomRepositories").split("\n")
         custom_addons = []
         for addon in addon_list:
-            if " " in addon:
-                addon_and_branch = addon.split(" ")
-                custom_addons.append({"url": addon_and_branch[0], "branch": addon_and_branch[1]})
-            else:
-                custom_addons.append({"url": addon, "branch": "master"})
+            try:
+                url, branch = addon.split(" ", 1)
+            except ValueError:
+                url = addon
+                branch = "master"
+
+            #Check for optional git service identifier for self-hosted instances
+            try:
+                url, git_service = url.rsplit("|", 1)
+            except ValueError:
+                git_service = ""
+
+            custom_addons.append({"url": url, "branch": branch, "git_service": git_service})
+
         for addon in custom_addons:
             if self.current_thread.isInterruptionRequested():
                 return
             if addon and addon["url"]:
-                if addon["url"][-1] == "/":
-                    addon["url"] = addon["url"][0:-1]  # Strip trailing slash
-                addon["url"] = addon["url"].split(".git")[0]  # Remove .git
-                name: str = addon["url"].split("/")[-1]
+                addon["url"] = addon["url"].rstrip("/")  # Strip trailing slash
+                addon["url"] = addon["url"].rsplit(".git", 1)[0]  # Remove .git
+                name: str = addon["url"].rsplit("/", 1)[1]
                 if name in self.package_names:
                     # We already have something with this name, skip this one
                     fci.Console.PrintWarning(
@@ -128,7 +134,7 @@ class CreateAddonListWorker(QtCore.QThread):
                     state = Addon.Status.UNCHECKED
                 else:
                     state = Addon.Status.NOT_INSTALLED
-                repo = Addon(name, addon["url"], state, addon["branch"])
+                repo = Addon(name, addon["url"], state, addon["branch"], addon["git_service"])
                 md_file = os.path.join(addon_dir, "package.xml")
                 if os.path.isfile(md_file):
                     try:
