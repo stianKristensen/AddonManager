@@ -231,6 +231,12 @@ def recognized_git_location(repo) -> bool:
         "codeberg.org",
     ]
 
+def get_repo_host(repo):
+    """Returns repository host service"""
+    if repo.git_service:
+        return repo.git_service
+
+    return urlparse(repo.url).netloc
 
 def construct_git_url(repo, filename):
     """Returns a direct download link to a file in an online Git repo"""
@@ -264,14 +270,11 @@ def get_desc_regex(repo):
     """Returns a regex string that extracts a WB description to be displayed in the description
     panel of the Addon manager, if the README could not be found"""
 
-    if repo.git_service:
-        identifier = repo.git_service
-    else:
-        identifier = urlparse(repo.url).netloc
+    repo_host = get_repo_host(repo)
 
-    if identifier in ["github.com", "codeberg.org", "gitea"]:
+    if repo_host in ["github.com", "codeberg.org", "gitea"]:
         return r'<meta property="og:description" content="(.*?)"'
-    if identifier in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
+    if repo_host in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
         return r'<meta.*?content="(.*?)".*?og:description.*?>'
     fci.Console.PrintLog(
         f"Debug: addonmanager_utilities.get_desc_regex: Unknown git host: {repo.url}\n"
@@ -281,16 +284,13 @@ def get_desc_regex(repo):
 
 def get_readme_html_url(repo):
     """Returns the location of a html file containing readme"""
-    if repo.git_service:
-        identifier = repo.git_service
-    else:
-        identifier = urlparse(repo.url).netloc
+    repo_host = get_repo_host(repo)
 
-    if identifier == "github.com":
+    if repo_host == "github.com":
         return f"{repo.url}/blob/{repo.branch}/README.md"
-    if identifier in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
+    if repo_host in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
         return f"{repo.url}/-/blob/{repo.branch}/README.md"
-    if identifier in ["codeberg.org", "gitea"]:
+    if repo_host in ["codeberg.org", "gitea"]:
         return f"{repo.url}/src/branch/{repo.branch}/README.md"
 
     fci.Console.PrintLog(f"Unrecognized git repo location '{repo.url}' -- guessing it is a GitLab instance...")
