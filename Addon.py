@@ -175,7 +175,6 @@ class Addon:
     ):
         self.name = name.strip()
         self.display_name = self.name
-        self.url = url.strip()
         self.relative_cache_path = ""
         self.branch = branch.strip()
         self.branch_display_name = branch.strip()
@@ -185,6 +184,15 @@ class Addon:
         self.remote_last_updated: Optional[datetime.datetime] = None
         self.stats = AddonStats()
         self.score = 0
+
+        #Check for optional git service identifier for self-hosted instances
+        try:
+            url, git_service = url.rsplit("|", 1)
+        except ValueError:
+            git_service = ""
+        
+        self.url = url.strip()
+        self.git_service = git_service.strip()
 
         # In cases where there are multiple versions/branches/installations available for an addon,
         # this dictionary is the mapping from the displayed name in the UI (as given in the
