@@ -240,24 +240,24 @@ def get_repo_host(repo):
 
 def construct_git_url(repo, filename):
     """Returns a direct download link to a file in an online Git repo"""
+    repo_host = get_repo_host(repo)
+    if not repo_host:
+        return f"{urlparse(repo.url).path}/{filename}"
 
-    parsed_url = urlparse(repo.url)
-    repo_url = repo.url[:-4] if repo.url.endswith(".git") else repo.url
-    if parsed_url.netloc == "github.com":
-        return f"{repo_url}/raw/{repo.branch}/{filename}"
-    if parsed_url.netloc in ["gitlab.com", "framagit.org", "salsa.debian.org"]:
-        return f"{repo_url}/-/raw/{repo.branch}/{filename}"
-    if parsed_url.netloc in ["codeberg.org"]:
-        return f"{repo_url}/raw/branch/{repo.branch}/{filename}"
-    if parsed_url.netloc == "":
-        return f"{parsed_url.path}/{filename}"
+    if repo_host == "github.com":
+        return f"{repo.url}/raw/{repo.branch}/{filename}"
+    if repo_host in ["gitlab.com", "framagit.org", "salsa.debian.org", "gitlab"]:
+        return f"{repo.url}/-/raw/{repo.branch}/{filename}"
+    if repo_host in ["codeberg.org", "gitea"]:
+        return f"{repo.url}/raw/branch/{repo.branch}/{filename}"
+
     fci.Console.PrintLog(
         "Debug: addonmanager_utilities.construct_git_url: Unknown git host:"
-        + parsed_url.netloc
+        + repo.url
         + f" for file {filename}\n"
     )
     # Assume it's some kind of local GitLab instance...
-    return f"{repo_url}/-/raw/{repo.branch}/{filename}"
+    return f"{repo.url}/-/raw/{repo.branch}/{filename}"
 
 
 def get_readme_url(repo):
