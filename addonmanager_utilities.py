@@ -290,7 +290,7 @@ def get_readme_html_url(repo):
         return f"{repo.url}/blob/{repo.branch}/README.md"
     if identifier in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
         return f"{repo.url}/-/blob/{repo.branch}/README.md"
-    if identifier == "gitea":
+    if identifier in ["codeberg.org", "gitea"]:
         return f"{repo.url}/src/branch/{repo.branch}/README.md"
 
     fci.Console.PrintLog(f"Unrecognized git repo location '{repo.url}' -- guessing it is a GitLab instance...")
