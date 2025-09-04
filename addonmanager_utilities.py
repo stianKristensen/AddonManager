@@ -279,14 +279,18 @@ def get_desc_regex(repo):
 
 def get_readme_html_url(repo):
     """Returns the location of a html file containing readme"""
+    if repo.git_service:
+        identifier = repo.git_service
+    else:
+        identifier = urlparse(repo.url).netloc
 
-    parsed_url = urlparse(repo.url)
-    if parsed_url.netloc == "github.com":
+    if identifier == "github.com":
         return f"{repo.url}/blob/{repo.branch}/README.md"
-    if parsed_url.netloc in ["gitlab.com", "salsa.debian.org", "framagit.org"]:
+    if identifier in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
         return f"{repo.url}/-/blob/{repo.branch}/README.md"
-    if parsed_url.netloc in ["gitlab.com", "salsa.debian.org", "framagit.org"]:
-        return f"{repo.url}/raw/branch/{repo.branch}/README.md"
+    if identifier == "gitea":
+        return f"{repo.url}/src/branch/{repo.branch}/README.md"
+
     fci.Console.PrintLog("Unrecognized git repo location '' -- guessing it is a GitLab instance...")
     return f"{repo.url}/-/blob/{repo.branch}/README.md"
 
