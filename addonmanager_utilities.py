@@ -264,13 +264,15 @@ def get_desc_regex(repo):
     """Returns a regex string that extracts a WB description to be displayed in the description
     panel of the Addon manager, if the README could not be found"""
 
-    parsed_url = urlparse(repo.url)
-    if parsed_url.netloc == "github.com":
+    if repo.git_service:
+        identifier = repo.git_service
+    else:
+        identifier = urlparse(repo.url).netloc
+
+    if identifier in ["github.com", "codeberg.org", "gitea"]:
         return r'<meta property="og:description" content="(.*?)"'
-    if parsed_url.netloc in ["gitlab.com", "salsa.debian.org", "framagit.org"]:
+    if identifier in ["gitlab.com", "salsa.debian.org", "framagit.org", "gitlab"]:
         return r'<meta.*?content="(.*?)".*?og:description.*?>'
-    if parsed_url.netloc in ["codeberg.org"]:
-        return r'<meta property="og:description" content="(.*?)"'
     fci.Console.PrintLog(
         f"Debug: addonmanager_utilities.get_desc_regex: Unknown git host: {repo.url}\n"
     )
