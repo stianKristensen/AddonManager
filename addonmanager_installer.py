@@ -430,7 +430,6 @@ class AddonInstaller(QtCore.QObject):
 
     def _code_in_branch_subdirectory(self, destination: str) -> bool:
         test_path = os.path.join(destination, self._expected_subdirectory_name())
-
         fci.Console.PrintLog(f"Checking for possible zip sub-path {test_path}...")
         if os.path.isdir(test_path):
             fci.Console.PrintLog(f"path exists.\n")
@@ -468,7 +467,10 @@ class AddonInstaller(QtCore.QObject):
         _, _, name = url.rpartition("/")
         return name
 
-    def _move_code_out_of_subdirectory(self, destination, subdirectory):
+    def _move_code_out_of_subdirectory(self, destination, subdirectory=None):
+        if not subdirectory:
+            subdirectory = os.path.join(destination, self._expected_subdirectory_name())
+
         for extracted_filename in os.listdir(os.path.join(destination, subdirectory)):
             shutil.move(
                 os.path.join(destination, subdirectory, extracted_filename),
