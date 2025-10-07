@@ -408,20 +408,29 @@ class AddonInstaller(QtCore.QObject):
         # GitHub (and possibly other hosts) put all files in the zip into a subdirectory named
         # after the branch. If that is the setup that we just extracted, move all files out of
         # that subdirectory.
+        actual_path = None
         if self._code_in_branch_subdirectory(destination):
             actual_path = os.path.join(
-                destination, f"{self.addon_to_install.name}-{self.addon_to_install.branch}"
+                destination, self._expected_subdirectory_name()
             )
+        
+        elif self._code_in_branch_subdirectory_gitea(destination):
+            actual_path = os.path.join(
+                destination, self._expected_subdirectory_name_gitea()
+        )
+
+        if actual_path:
             fci.Console.PrintLog(
                 f"ZIP installation moving code from {actual_path} to {destination}"
             )
-            self._move_code_out_of_subdirectory(destination)
+            self._move_code_out_of_subdirectory(destination, actual_path)
 
         fci.Console.PrintLog("ZIP installation complete.\n")
         self._finalize_successful_installation()
 
     def _code_in_branch_subdirectory(self, destination: str) -> bool:
         test_path = os.path.join(destination, self._expected_subdirectory_name())
+
         fci.Console.PrintLog(f"Checking for possible zip sub-path {test_path}...")
         if os.path.isdir(test_path):
             fci.Console.PrintLog(f"path exists.\n")
@@ -438,9 +447,28 @@ class AddonInstaller(QtCore.QObject):
         _, _, name = url.rpartition("/")
         branch = self.addon_to_install.branch
         return f"{name}-{branch}"
+    
+    def _code_in_branch_subdirectory_gitea(self, destination: str) -> bool:
+        test_path = os.path.join(
+            destination, self._expected_subdirectory_name_gitea())
 
-    def _move_code_out_of_subdirectory(self, destination):
-        subdirectory = os.path.join(destination, self._expected_subdirectory_name())
+        fci.Console.PrintLog(f"Checking for possible zip sub-path {test_path}...")
+        if os.path.isdir(test_path):
+            fci.Console.PrintLog(f"path exists.\n")
+            return True
+        fci.Console.PrintLog(f"path does not exist.\n")
+        return False
+    
+    def _expected_subdirectory_name_gitea(self) -> str:
+        url = self.addon_to_install.url
+        if url.endswith("/"):
+            url = url[:-1]
+        if url.endswith(".git"):
+            url = url[:-4]
+        _, _, name = url.rpartition("/")
+        return name
+
+    def _move_code_out_of_subdirectory(self, destination, subdirectory):
         for extracted_filename in os.listdir(os.path.join(destination, subdirectory)):
             shutil.move(
                 os.path.join(destination, subdirectory, extracted_filename),
