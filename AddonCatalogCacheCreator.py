@@ -42,7 +42,6 @@ import zipfile
 import AddonCatalog
 import addonmanager_metadata
 import addonmanager_utilities as utils
-import addonmanager_freecad_interface as fci
 
 
 ADDON_CATALOG_URL = (
@@ -140,7 +139,7 @@ class CacheWriter:
             json.dump(self.icon_errors, f, indent="  ")
 
         os.chdir(original_working_directory)
-        fci.Console.PrintMessage(f"Wrote cache to {os.path.join(self.cwd, 'addon_catalog_cache.zip')}")
+        print(f"Wrote cache to {os.path.join(self.cwd, 'addon_catalog_cache.zip')}")
 
     def create_local_copy_of_addons(self):
         self.catalog = CatalogFetcher().catalog
@@ -162,8 +161,8 @@ class CacheWriter:
             elif catalog_entry.zip_url is not None:
                 self.create_local_copy_of_single_addon_with_zip(addon_id, index, catalog_entry)
             else:
-                fci.Console.PrintError(
-                    f"Invalid catalog entry for {addon_id}. "
+                print(
+                    f"ERROR: Invalid catalog entry for {addon_id}. "
                     "Neither git info nor zip info was specified."
                 )
                 continue
@@ -223,10 +222,10 @@ class CacheWriter:
                 cache_entry.package_xml.encode("utf-8")
             )
         except xml.etree.ElementTree.ParseError:
-            fci.Console.PrintError(f"Failed to parse XML from {path_to_package_xml}")
+            print(f"ERROR: Failed to parse XML from {path_to_package_xml}")
             return None
         except RuntimeError:
-            fci.Console.PrintError(f"Failed to read metadata from {path_to_package_xml}")
+            print(f"ERROR: Failed to read metadata from {path_to_package_xml}")
             return None
 
         relative_icon_path = self.get_icon_from_metadata(metadata)
@@ -239,7 +238,7 @@ class CacheWriter:
                     cache_entry.icon_data = base64.b64encode(f.read()).decode("utf-8")
             else:
                 self.icon_errors[metadata.name] = relative_icon_path
-                fci.Console.PrintError(f"Could not find icon file {absolute_icon_path}")
+                print(f"ERROR: Could not find icon file {absolute_icon_path}")
         return cache_entry
 
     def create_local_copy_of_single_addon_with_git(
@@ -249,8 +248,8 @@ class CacheWriter:
         try:
             self.clone_or_update(expected_name, catalog_entry.repository, catalog_entry.git_ref)
         except RuntimeError as e:
-            fci.Console.PrintError(f"Failed to clone or update {addon_id} from {catalog_entry.repository}.")
-            fci.Console.PrintError(f"{e}")
+            print(f"ERROR: Failed to clone or update {addon_id} from {catalog_entry.repository}.")
+            print(f"ERROR: {e}")
 
     @staticmethod
     def get_directory_name(addon_id, index, catalog_entry):
@@ -268,7 +267,7 @@ class CacheWriter:
     ):
         response = requests.get(catalog_entry.zip_url)
         if response.status_code != 200:
-            fci.Console.PrintError(f"Failed to fetch zip data for {addon_id} from {catalog_entry.zip_url}.")
+            print(f"ERROR: Failed to fetch zip data for {addon_id} from {catalog_entry.zip_url}.")
             return
         extract_to_dir = self.get_directory_name(addon_id, index, catalog_entry)
         if os.path.exists(extract_to_dir):
@@ -291,7 +290,7 @@ class CacheWriter:
         if minimal is set to False."""
 
         if not os.path.exists(os.path.join(os.getcwd(), name, ".git")):
-            fci.Console.PrintMessage(f"Cloning {url} to {name}", flush=True)
+            print(f"Cloning {url} to {name}", flush=True)
             # Shallow, but do include the last commit on each branch and tag
             command = [
                 "git",
@@ -307,7 +306,7 @@ class CacheWriter:
             if completed_process.returncode != 0:
                 raise RuntimeError(f"Clone failed for {url}")
         else:
-            fci.Console.PrintMessage(f"Updating {name}", flush=True)
+            print(f"Updating {name}", flush=True)
             old_dir = os.getcwd()
             os.chdir(os.path.join(old_dir, name))
             try:
@@ -331,8 +330,8 @@ class CacheWriter:
                         raise RuntimeError(f"git merge failed for {name} branch {branch}")
             except RuntimeError as e:
                 # In the event of basically ANY error, delete the original and re-clone.
-                fci.Console.PrintError(e)
-                fci.Console.PrintWarning("Deleting and re-cloning the original repo")
+                print(e)
+                print("Deleting and re-cloning the original repo")
                 os.chdir(old_dir)
                 utils.rmdir(os.path.join(old_dir, name))
                 CacheWriter.clone_or_update(name, url, branch)
@@ -405,7 +404,7 @@ class CacheWriter:
         try:
             dt = datetime.datetime.fromisoformat(completed_process_output)
         except ValueError:
-            fci.Console.PrintError(f"Failed to parse last commit time from {completed_process_output}")
+            print(f"ERROR: Failed to parse last commit time from {completed_process_output}")
             dt = None
         return dt
 
@@ -422,8 +421,8 @@ class CacheWriter:
         temp_file_path = zip_file_path + ".new"
 
         if not os.path.isdir(start_dir):
-            fci.Console.PrintError(
-                f"Directory {start_dir} does not exist. Skipping zip creation for addon {addon_id}."
+            print(
+                f"ERROR: Directory {start_dir} does not exist. Skipping zip creation for addon {addon_id}."
             )
             return
 
@@ -437,7 +436,7 @@ class CacheWriter:
                     try:
                         zf.write(full_path, rel_path)
                     except (OSError, FileNotFoundError, RuntimeError) as e:
-                        fci.Console.PrintWarning(f"Could not add {full_path} to zip archive: {e}")
+                        print(f"WARNING: Could not add {full_path} to zip archive: {e}")
         try:
             good = False
             with zipfile.ZipFile(temp_file_path, "r") as zf:
@@ -448,13 +447,13 @@ class CacheWriter:
                 os.rename(temp_file_path, zip_file_path)
             else:
                 os.remove(temp_file_path)
-                fci.Console.PrintError(
+                print(
                     f"Failed to create zip file {zip_file_path} for addon {addon_id}: data is corrupt"
                 )
         except zipfile.BadZipFile:
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
-            fci.Console.PrintError(
+            print(
                 f"Failed to create zip file {zip_file_path} for addon {addon_id}: data is not a valid zip file"
             )
 
